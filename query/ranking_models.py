@@ -89,17 +89,17 @@ class VectorRankingModel(RankingModel):
 
     @staticmethod
     def tf(freq_term:int) -> float:
-        return 0
+        return 1 + math.log(freq_term, 2)
 
     @staticmethod
     def idf(doc_count:int, num_docs_with_term:int )->float:
-        return 0
+        return math.log(doc_count/num_docs_with_term, 2)
 
     @staticmethod
     def tf_idf(doc_count:int, freq_term:int, num_docs_with_term) -> float:
-        tf = 0
-        idf = 0
-        #print(f"TF:{tf} IDF:{idf} n_i: {num_docs_with_term} N: {doc_count}")
+        tf = VectorRankingModel.tf(freq_term)
+        idf = VectorRankingModel.idf(doc_count, num_docs_with_term)
+        print(f"TF:{tf} IDF:{idf} n_i: {num_docs_with_term} N: {doc_count}")
         return tf*idf
 
     def get_ordered_docs(self,query:Mapping[str,TermOccurrence],
