@@ -40,15 +40,38 @@ class BooleanRankingModel(RankingModel):
         self.operator = operator
 
     def intersection_all(self,map_lst_occurrences:Mapping[str,List[TermOccurrence]]) -> List[int]:
-        set_ids = set()
-        return None
-    def union_all(self,map_lst_occurrences:Mapping[str,List[TermOccurrence]]) -> List[int]:
-        set_ids = set()
+        dict_ids = dict()
+        for term, lst_occurrences in map_lst_occurrences.items():
+            for occur in lst_occurrences:
+                if not (occur.term_id in dict_ids):
+                    dict_ids[occur.term_id] = [occur.doc_id]
+                else:
+                    dict_ids[occur.term_id].append(occur.doc_id)
+        list_ids = list()
+        old_list = None
+        for term_id, doc_ids_list in dict_ids.items():
+            if old_list == None:
+                old_list = doc_ids_list
+            else:
+                for doc_id in doc_ids_list:
+                    if doc_id in old_list:
+                        list_ids.append(doc_id)
+        set_ids = set(list_ids)
+        return set_ids
         
-        for  term, lst_occurrences in map_lst_occurrences.items():
-            pass
-
-        return None
+    def union_all(self,map_lst_occurrences:Mapping[str,List[TermOccurrence]]) -> List[int]:
+        dict_ids = dict()
+        for term, lst_occurrences in map_lst_occurrences.items():
+            for occur in lst_occurrences:
+                if not (occur.term_id in dict_ids):
+                    dict_ids[occur.term_id] = [occur.doc_id]
+                else:
+                    dict_ids[occur.term_id].append(occur.doc_id)
+        list_ids = list()
+        for term_id, doc_ids_list in dict_ids.items():
+            list_ids += doc_ids_list
+        set_ids = set(list_ids)
+        return set_ids
 
     def get_ordered_docs(self,query:Mapping[str,TermOccurrence],
                               map_lst_occurrences:Mapping[str,List[TermOccurrence]]) -> (List[int], Mapping[int,float]):
