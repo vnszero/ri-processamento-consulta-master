@@ -16,9 +16,23 @@ class IndexPreComputedVals():
             doc_count: o numero de documentos que o indice possui
             document_norm: A norma por documento (cada termo é presentado pelo seu peso (tfxidf))
         """
-        self.document_norm = {}
+        self.document_norm = dict()
         self.doc_count = self.index.document_count
-        
+        dict_w = dict()
+        for term in self.index.vocabulary:
+            occur_list = self.index.get_occurrence_list(term)
+            num_docs_with_term = len(occur_list)
+            for occur in occur_list:
+                if not(occur.doc_id in dict_w):
+                    dict_w[occur.doc_id] = [VectorRankingModel.tf_idf(self.doc_count, occur.term_freq, num_docs_with_term)]
+                else:
+                    dict_w[occur.doc_id].append(VectorRankingModel.tf_idf(self.doc_count, occur.term_freq, num_docs_with_term)) 
+        for doc_id, w_list in dict_w.items():
+            sum = 0
+            for w in w_list:
+                sum += w**2
+            self.document_norm[doc_id] = math.sqrt(sum)      
+    
 class RankingModel():
     @abstractmethod
     def get_ordered_docs(self,query:Mapping[str,TermOccurrence],
@@ -99,7 +113,7 @@ class VectorRankingModel(RankingModel):
     def tf_idf(doc_count:int, freq_term:int, num_docs_with_term) -> float:
         tf = VectorRankingModel.tf(freq_term)
         idf = VectorRankingModel.idf(doc_count, num_docs_with_term)
-        print(f"TF:{tf} IDF:{idf} n_i: {num_docs_with_term} N: {doc_count}")
+        #print(f"TF:{tf} IDF:{idf} n_i: {num_docs_with_term} N: {doc_count}")
         return tf*idf
 
     def get_ordered_docs(self,query:Mapping[str,TermOccurrence],
