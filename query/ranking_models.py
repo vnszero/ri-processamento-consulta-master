@@ -1,7 +1,7 @@
 from typing import List
 from abc import abstractmethod
 from typing import List, Set,Mapping
-from index.structure import TermOccurrence
+from index.structure import HashIndex,FileIndex,TermOccurrence
 import math
 from enum import Enum
 
@@ -9,6 +9,18 @@ class IndexPreComputedVals():
     def __init__(self,index):
         self.index = index
         self.precompute_vals()
+
+    def weight_dict(self) -> dict:
+        dict_w = dict()
+        for term in self.index.vocabulary:
+            occur_list = self.index.get_occurrence_list(term)
+            num_docs_with_term = len(occur_list)
+            for occur in occur_list:
+                if not(occur.doc_id in dict_w):
+                    dict_w[occur.doc_id] = [VectorRankingModel.tf_idf(self.doc_count, occur.term_freq, num_docs_with_term)]
+                else:
+                    dict_w[occur.doc_id].append(VectorRankingModel.tf_idf(self.doc_count, occur.term_freq, num_docs_with_term))
+        return dict_w
 
     def precompute_vals(self):
         """
@@ -18,21 +30,13 @@ class IndexPreComputedVals():
         """
         self.document_norm = dict()
         self.doc_count = self.index.document_count
-        dict_w = dict()
-        for term in self.index.vocabulary:
-            occur_list = self.index.get_occurrence_list(term)
-            num_docs_with_term = len(occur_list)
-            for occur in occur_list:
-                if not(occur.doc_id in dict_w):
-                    dict_w[occur.doc_id] = [VectorRankingModel.tf_idf(self.doc_count, occur.term_freq, num_docs_with_term)]
-                else:
-                    dict_w[occur.doc_id].append(VectorRankingModel.tf_idf(self.doc_count, occur.term_freq, num_docs_with_term)) 
+        dict_w = self.weight_dict()
         for doc_id, w_list in dict_w.items():
             sum = 0
             for w in w_list:
                 sum += w**2
             self.document_norm[doc_id] = math.sqrt(sum)      
-    
+
 class RankingModel():
     @abstractmethod
     def get_ordered_docs(self,query:Mapping[str,TermOccurrence],
@@ -118,11 +122,45 @@ class VectorRankingModel(RankingModel):
 
     def get_ordered_docs(self,query:Mapping[str,TermOccurrence],
                               docs_occur_per_term:Mapping[str,List[TermOccurrence]]) -> (List[int], Mapping[int,float]):
+            #print(query)
+            #print('fhglfgh')
+            #print(docs_occur_per_term)
             documents_weight = {}
 
+            # pegando a norma dos documentos
+            index = FileIndex()
+            for term, occur_list in docs_occur_per_term.items():
+                for occur in occur_list:
+                    index.index(term, occur.doc_id, occur.term_freq)  
+            index.finish_indexing()
+            pre_comp_vals = IndexPreComputedVals(index)
+            #print(pre_comp_vals.document_norm)
 
+            # recalcular o peso por documento
+            w_per_doc = pre_comp_vals.weight_dict()
+            #print(w_per_doc)
 
+            # encontrar o peso por query
+            w_per_query = dict()
+            for term, occur in query.items():
+                occur_list = pre_comp_vals.index.get_occurrence_list(term)
+                num_docs_with_term = len(occur_list)
+                for lst in occur_list:
+                    if not (lst.doc_id in w_per_query):
+                        w_per_query[lst.doc_id] = [VectorRankingModel.tf_idf(pre_comp_vals.doc_count, occur.term_freq, num_docs_with_term)]
+                    else:
+                        w_per_query[lst.doc_id].append(VectorRankingModel.tf_idf(pre_comp_vals.doc_count, occur.term_freq, num_docs_with_term))
+            #print(w_per_query)
 
+            for doc in w_per_doc:
+                documents_weight[doc] = 0
+                for wd in w_per_doc[doc]:
+                    for wq in w_per_query[doc]:
+                        documents_weight[doc] += wd * wq
+                if pre_comp_vals.document_norm[doc] != 0:
+                    documents_weight[doc] /= pre_comp_vals.document_norm[doc]
+                else:
+                    documents_weight[doc] = 0
 
             #retona a lista de doc ids ordenados de acordo com o TF IDF
             return self.rank_document_ids(documents_weight),documents_weight
