@@ -42,10 +42,10 @@ class QueryRunner:
 		return relevance_count
 
 	def compute_precision_recall(self, n:int, lst_docs:List[int],relevant_docs:Set[int]) -> (float,float):
-		
 		precision = None
 		recall = None
 		return precision, recall
+
 	def get_query_term_occurence(self, query:str) -> Mapping[str,TermOccurrence]:
 		"""
 			Preprocesse a consulta da mesma forma que foi preprocessado o texto do documento (use a classe Cleaner para isso).
@@ -56,16 +56,19 @@ class QueryRunner:
 		"""
 		#print(self.index)
 		map_term_occur = {}
-		id = 1
+		count_query = dict()
 		for term in query.split(' '):
-			occurrence_list = self.index.get_occurrence_list(term)
-			if not(occurrence_list == []) and not(term in map_term_occur.keys()):
-				map_term_occur[term] = TermOccurrence(None, id, 1)
-				id += 1
-			elif not(occurrence_list == []) and term in map_term_occur.keys():
-				term_freq = map_term_occur[term].term_freq
-				term_id = map_term_occur[term].term_id
-				map_term_occur[term] = TermOccurrence(None, term_id, term_freq+1)
+			preprocessed_term = self.cleaner.preprocess_word(term)
+			occurrence_list = self.index.get_occurrence_list(preprocessed_term)
+			if preprocessed_term in count_query:
+				count_query[preprocessed_term] += 1
+			else:
+				count_query[preprocessed_term] = 1
+			if occurrence_list != []:
+				term_id = self.index.get_term_id(preprocessed_term)
+				for next_occur in occurrence_list:
+					if term_id == next_occur.term_id:
+						map_term_occur[preprocessed_term] = TermOccurrence(None, term_id, count_query[preprocessed_term])
 		return map_term_occur
 
 	def get_occurrence_list_per_term(self, terms:List) -> Mapping[str, List[TermOccurrence]]:
