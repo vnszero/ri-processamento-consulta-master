@@ -56,9 +56,16 @@ class QueryRunner:
 		"""
 		#print(self.index)
 		map_term_occur = {}
-
-
-
+		id = 1
+		for term in query.split(' '):
+			occurrence_list = self.index.get_occurrence_list(term)
+			if not(occurrence_list == []) and not(term in map_term_occur.keys()):
+				map_term_occur[term] = TermOccurrence(None, id, 1)
+				id += 1
+			elif not(occurrence_list == []) and term in map_term_occur.keys():
+				term_freq = map_term_occur[term].term_freq
+				term_id = map_term_occur[term].term_id
+				map_term_occur[term] = TermOccurrence(None, term_id, term_freq+1)
 		return map_term_occur
 
 	def get_occurrence_list_per_term(self, terms:List) -> Mapping[str, List[TermOccurrence]]:
