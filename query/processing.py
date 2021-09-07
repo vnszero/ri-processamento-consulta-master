@@ -78,7 +78,8 @@ class QueryRunner:
 		"""
 		dic_terms = dict()
 		for term in terms:
-			dic_terms[term] = self.index.get_occurrence_list(term)
+			preprocessed_term = self.cleaner.preprocess_word(term)
+			dic_terms[preprocessed_term] = self.index.get_occurrence_list(preprocessed_term)
 		return dic_terms
 
 	def get_docs_term(self, query:str) -> List[int]:
@@ -87,14 +88,14 @@ class QueryRunner:
 			usando o modelo especificado pelo atributo ranking_model
 		"""
 		#Obtenha, para cada termo da consulta, sua ocorrencia por meio do método get_query_term_occurence
-		dic_query_occur = None
+		dic_query_occur = self.get_query_term_occurence(query)
 
 		#obtenha a lista de ocorrencia dos termos da consulta
-		dic_occur_per_term_query = None
-
+		terms = query.split(' ')
+		dic_occur_per_term_query = self.get_occurrence_list_per_term(terms)
 
 		#utilize o ranking_model para retornar o documentos ordenados considrando dic_query_occur e dic_occur_per_term_query
-		return None
+		return self.ranking_model.get_ordered_docs(dic_query_occur, dic_occur_per_term_query)
 
 	@staticmethod
 	def runQuery(query:str, indice:Index, indice_pre_computado:IndexPreComputedVals , map_relevantes:Mapping[str,Set[int]]):
