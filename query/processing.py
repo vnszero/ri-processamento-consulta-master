@@ -31,9 +31,14 @@ class QueryRunner:
 		Os documentos relevantes estão no parametro docRelevantes
 		"""
 		#print(f"Respostas: {respostas} doc_relevantes: {doc_relevantes}")
+		#print(n)
 		relevance_count = 0
-        
-
+		if respostas != []:
+			if n > len(respostas):
+				n = len(respostas)
+			for top in range(n):
+				if respostas[top] in doc_relevantes:
+					relevance_count += 1
 		return relevance_count
 
 	def compute_precision_recall(self, n:int, lst_docs:List[int],relevant_docs:Set[int]) -> (float,float):
