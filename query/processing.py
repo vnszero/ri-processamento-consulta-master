@@ -42,8 +42,13 @@ class QueryRunner:
 		return relevance_count
 
 	def compute_precision_recall(self, n:int, lst_docs:List[int],relevant_docs:Set[int]) -> (float,float):
-		precision = None
-		recall = None
+		precision = 0
+		recall = 0
+
+		recall = self.count_topn_relevant(n, lst_docs, relevant_docs) / len(relevant_docs)
+		if len(lst_docs) != 0:
+			precision = self.count_topn_relevant(n, lst_docs, relevant_docs) / len(lst_docs)
+
 		return precision, recall
 
 	def get_query_term_occurence(self, query:str) -> Mapping[str,TermOccurrence]:
@@ -111,33 +116,42 @@ class QueryRunner:
 		#PEça para usuario selecionar entre Booleano ou modelo vetorial para intanciar o QueryRunner
 		#apropriadamente. NO caso do booleano, vc deve pedir ao usuario se será um "and" ou "or" entre os termos.
 		#abaixo, existem exemplos fixos.
-		qr = QueryRunner(indice, VectorRankingModel(indice_pre_computado))
+
+		cl = Cleaner(stop_words_file="stopwords.txt",language="portuguese", perform_stop_words_removal=False,perform_accents_removal=False, perform_stemming=False)
+		
+		qr = QueryRunner(indice, VectorRankingModel(indice_pre_computado), cl)
 		time_checker.print_delta("Query Creation")
 
-
 		#Utilize o método get_docs_term para obter a lista de documentos que responde esta consulta
-		resposta = None
+		resp_list, resp_map = qr.get_docs_term(query)
+
 		time_checker.print_delta("anwered with {len(respostas)} docs")
 
 		#nesse if, vc irá verificar se o termo possui documentos relevantes associados a ele
 		#se possuir, vc deverá calcular a Precisao e revocação nos top 5, 10, 20, 50.
 		#O for que fiz abaixo é só uma sugestao e o metododo countTopNRelevants podera auxiliar no calculo da revocacao e precisao
-		if(True):
-			arr_top = [5,10,20,50]
-			revocacao = 0
-			precisao = 0
-			for n in arr_top:
-				revocacao = 0#substitua aqui pelo calculo da revocacao topN
-				precisao = 0#substitua aqui pelo calculo da revocacao topN
-				print("Precisao @{n}: {precisao}")
-				print("Recall @{n}: {revocacao}")
 
-		#imprima aas top 10 respostas
+		if(query in map_relevantes.keys()):
+			arr_top = [5,10,20,50]
+
+			#imprima as top 10 respostas
+			for n in arr_top:
+				precision, recall = qr.compute_precision_recall(n, list(resp_list), set(map_relevantes[query]))
+
+				print('precision #'+f'{n}'+': '+f'{precision}')
+				print('Recall #'+f'{n}'+': '+f'{recall}')
+		else:
+			print('Termo não existe nos documentos!')
 
 	@staticmethod
 	def main():
 		#leia o indice (base da dados fornecida)
-		index = None
+		'''
+			como montar o indice a partir da base de dados?
+		'''
+		idx = None
+
+		idxPreCom = IndexPreComputedVals(idx)
 
 		#Checagem se existe um documento (apenas para teste, deveria existir)
 		print(f"Existe o doc? index.hasDocId(105047)")
@@ -146,15 +160,15 @@ class QueryRunner:
 		print("Precomputando valores atraves do indice...");
 		check_time = CheckTime()
         
-
-
-
 		check_time.print_delta("Precomputou valores")
 
 		#encontra os docs relevantes
-		map_relevance = None
+		'''
+			como vai funcionar essa chamada do map relevance se get_relevance_per_query nao eh um metodo estatico?
+		'''
+		map_relevance = QueryRunner.get_relevance_per_query()
 		
 		print("Fazendo query...")
 		#aquui, peça para o usuário uma query (voce pode deixar isso num while ou fazer um interface grafica se estiver bastante animado ;)
-		query = "São Paulo";
-		runQuery(query,idx, idxPreCom,mapRelevances);
+		query = "São Paulo"
+		QueryRunner.runQuery(query, idx, idxPreCom, map_relevance)
